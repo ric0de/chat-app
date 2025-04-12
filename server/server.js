@@ -4,12 +4,14 @@ const http = require('http');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const { Server } = require('socket.io');
+require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: '*',
+    methods: ['GET', 'POST']
   },
 });
 
@@ -30,7 +32,7 @@ app.get('/', (req, res) => {
 io.on('connection', socket => {
   console.log('🟢 New client connected');
 
-  socket.on('send_message', (data) => {
+  socket.on('send_message', data => {
     console.log('📩 Message received:', data);
     socket.broadcast.emit('receive_message', data);
   });

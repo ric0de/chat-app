@@ -30,7 +30,7 @@ app.get('/', (req, res) => {
 io.on('connection', socket => {
   console.log('🟢 New client connected');
 
-  socket.on('send_message', data => {
+  socket.on('send_message', (data) => {
     console.log('📩 Message received:', data);
     socket.broadcast.emit('receive_message', data);
   });

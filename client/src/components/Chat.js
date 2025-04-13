@@ -5,13 +5,22 @@ import socket from '../socket';
 const Chat = () => {
   const [msg, setMsg] = useState('');
   const [messages, setMessages] = useState([]);
+  const [isTyping, setIsTyping] = useState(false);
 
   useEffect(() => {
     socket.on('receive_message', (data) => {
       setMessages((prev) => [...prev, data]);
     });
 
-    return () => socket.off('receive_message');
+    socket.on('typing', () => {
+      setIsTyping(true);
+      setTimeout(() => setIsTyping(false), 1000); // hide after 1s
+    });
+
+    return () => {
+      socket.off('receive_message');
+      socket.off('typing');
+    };
   }, []);
 
   const sendMessage = () => {
@@ -31,7 +40,16 @@ const Chat = () => {
           <div key={i}>{m}</div>
         ))}
       </div>
-      <input value={msg} onChange={(e) => setMsg(e.target.value)} />
+      {/* Typing indicator */}
+      {isTyping && <p><em>Someone is typing...</em></p>}
+
+      <input
+        value={msg}
+        onChange={(e) => {
+          setMsg(e.target.value);
+          socket.emit('typing'); // Send typing event properly
+        }}
+      />
       <button onClick={sendMessage}>Send</button>
     </div>
   );

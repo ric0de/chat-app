@@ -37,9 +37,14 @@ const Chat: React.FC = () => {
       setTimeout(() => setIsTyping(false), 1500); // hide after 1.5s
     });
 
+    socket.on('message_deleted', (deletedId: string) => {
+      setMessages((prev) => prev.filter((m) => m._id !== deletedId));
+    });
+
     return () => {
       socket.off('receive_message');
       socket.off('typing');
+      socket.off('message_deleted');
     };
   }, []);
 

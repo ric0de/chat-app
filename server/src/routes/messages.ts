@@ -25,6 +25,8 @@ router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
     }
 
     await Message.findByIdAndDelete(messageId);
+    // Emit to all clients that a message has been deleted
+    req.app.get('io').emit('message_deleted', messageId);
     res.status(200).json({ message: 'Message deleted successfully' });
   } catch (err) {
     console.error('❌ Error deleting message:', err);

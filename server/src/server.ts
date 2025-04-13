@@ -1,10 +1,12 @@
-require('dotenv').config();
-const express = require('express');
-const http = require('http');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const { Server } = require('socket.io');
-require('dotenv').config();
+import dotenv from 'dotenv';
+import express, { Request, Response } from 'express';
+import http from 'http';
+import mongoose from 'mongoose';
+import cors from 'cors';
+import { Server, Socket } from 'socket.io';
+import Message from './models/Message';
+
+dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
@@ -19,20 +21,20 @@ app.use(cors());
 app.use(express.json());
 
 // MongoDB connection
-mongoose.connect(process.env.MONGO_URI)
+mongoose.connect(process.env.MONGO_URI as string)
   .then(() => console.log('✅ MongoDB connected'))
   .catch(err => console.error('❌ MongoDB connection error:', err));
 
 // Basic route
-app.get('/', (req, res) => {
+app.get('/', (_req: Request, res: Response) => {
   res.send('Server is running 🚀');
 });
 
 // Socket.io
-io.on('connection', socket => {
+io.on('connection', (socket:Socket) => {
   console.log('🟢 New client connected');
 
-  socket.on('send_message', data => {
+  socket.on('send_message', (data: any) => {
     console.log('📩 Message received:', data);
     socket.broadcast.emit('receive_message', data);
   });
@@ -41,7 +43,7 @@ io.on('connection', socket => {
     console.log('🔴 Client disconnected');
   });
 
-  socket.on('typing', (username) => {
+  socket.on('typing', (username: string) => {
     socket.broadcast.emit('typing', username);
   });
 });

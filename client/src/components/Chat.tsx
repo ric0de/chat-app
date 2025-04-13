@@ -2,8 +2,17 @@ import React, { useState, useEffect } from 'react';
 import socket from '../socket';
 
 type Message = {
+  _id: string;
   sender: string;
   content: string;
+  createdAt: string;
+  room: string;
+};
+
+type OutgoingMessage = {
+  sender: string;
+  content: string;
+  room?: string;
 };
 
 const Chat: React.FC = () => {
@@ -16,7 +25,11 @@ const Chat: React.FC = () => {
 
   useEffect(() => {
     socket.on('receive_message', (data: Message) => {
-      setMessages((prev) => [...prev, data]);
+      setMessages((prev) => {
+        // Avoid duplicate messages by _id
+        if (prev.some((m) => m._id === data._id)) return prev;
+        return [...prev, data];
+      });
     });
 
     socket.on('typing', (user: string) => {
@@ -32,12 +45,13 @@ const Chat: React.FC = () => {
 
   const sendMessage = () => {
     if (msg.trim()) {
-      const messageData: Message = {
+      const messageData: OutgoingMessage = {
         sender: username,
         content: msg,
+        room: 'main',
       };
       socket.emit('send_message', messageData);
-      setMessages((prev) => [...prev, messageData]); // show your own message
+      // setMessages((prev) => [...prev, messageData]); // undid bc of dupes
       setMsg('');
     }
   };
@@ -45,6 +59,37 @@ const Chat: React.FC = () => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setMsg(e.target.value);
     socket.emit('typing', username);
+  };
+
+  const handleDelete = async (id: string) => {
+    console.log('🔍 Deleting message with ID:', id);
+    try {
+      const res = await fetch(
+        `https://laughing-computing-machine-5gwxg766w76274qx-5000.app.github.dev/api/messages/${id}`, 
+        {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ sender: username }),
+      });
+  
+      const data = await res.json();
+  
+      if (res.ok) {
+        // Remove deleted message from UI
+        setMessages((prev) => prev.filter((m) => m._id !== id));
+      } else {
+        alert(data.error || 'Failed to delete message');
+      }
+    } catch (err) {
+      console.error('❌ Error deleting message:', err);
+      if (err instanceof Error) {
+        alert(`Something went wrong: ${err.message}`);
+      } else {
+        alert('Something went wrong');
+      }
+    }
   };
 
   if (!hasJoined) {
@@ -72,8 +117,25 @@ const Chat: React.FC = () => {
       <h2>💬 Chat</h2>
       <div>
         {messages.map((m, i) => (
-          <div key={i}>
-            <strong>{m.sender}:</strong> {m.content}
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+            <div>
+              <strong>{m.sender}:</strong> {m.content}
+            </div>
+            {m.sender === username && (
+              <button
+                onClick={() => handleDelete(m._id)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'red',
+                  cursor: 'pointer',
+                  fontSize: '16px'
+                }}
+                title="Delete message"
+              >
+                🗑️
+              </button>
+            )}
           </div>
         ))}
       </div>

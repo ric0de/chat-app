@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 import cors from 'cors';
 import { Server, Socket } from 'socket.io';
 import Message from './models/Message';
+import messageRoutes from './routes/messages';
 
 dotenv.config();
 
@@ -19,6 +20,7 @@ const io = new Server(server, {
 
 app.use(cors());
 app.use(express.json());
+app.use('/api/messages', messageRoutes);
 
 // MongoDB connection
 mongoose.connect(process.env.MONGO_URI as string)
@@ -34,9 +36,23 @@ app.get('/', (_req: Request, res: Response) => {
 io.on('connection', (socket:Socket) => {
   console.log('🟢 New client connected');
 
-  socket.on('send_message', (data: any) => {
-    console.log('📩 Message received:', data);
-    socket.broadcast.emit('receive_message', data);
+  socket.on('send_message', async (data: { sender: string; content: string; room?: string }) => {
+    try {
+      const message = new Message({
+        sender: data.sender,
+        content: data.content,
+        room: data.room || 'main',
+      });
+  
+      const savedMessage = await message.save();
+  
+      console.log('✅ Message saved:', savedMessage);
+  
+      // Emit to everyone (including sender)
+      io.emit('receive_message', savedMessage);
+    } catch (err) {
+      console.error('❌ Error saving message:', err);
+    }
   });
 
   socket.on('disconnect', () => {

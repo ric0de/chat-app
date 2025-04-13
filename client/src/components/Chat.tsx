@@ -1,23 +1,27 @@
-// src/components/Chat.js
 import React, { useState, useEffect } from 'react';
 import socket from '../socket';
 
-const Chat = () => {
-  const [msg, setMsg] = useState('');
-  const [messages, setMessages] = useState([]);
-  const [isTyping, setIsTyping] = useState(false);
-  const [username, setUsername] = useState('');
-  const [hasJoined, setHasJoined] = useState(false);
+type Message = {
+  sender: string;
+  content: string;
+};
+
+const Chat: React.FC = () => {
+  const [msg, setMsg] = useState<string>('');
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isTyping, setIsTyping] = useState<string | false>(false);
+  const [username, setUsername] = useState<string>('');
+  const [hasJoined, setHasJoined] = useState<boolean>(false);
 
 
   useEffect(() => {
-    socket.on('receive_message', (data) => {
+    socket.on('receive_message', (data: Message) => {
       setMessages((prev) => [...prev, data]);
     });
 
-    socket.on('typing', (user) => {
+    socket.on('typing', (user: string) => {
       setIsTyping(`${user} is typing...`);
-      setTimeout(() => setIsTyping(false), 1500); // hide after 1s
+      setTimeout(() => setIsTyping(false), 1500); // hide after 1.5s
     });
 
     return () => {
@@ -28,14 +32,19 @@ const Chat = () => {
 
   const sendMessage = () => {
     if (msg.trim()) {
-      const messageData = {
+      const messageData: Message = {
         sender: username,
         content: msg,
       };
       socket.emit('send_message', messageData);
-      setMessages((prev) => [...prev, messageData]); // also shows your own msg instantly
+      setMessages((prev) => [...prev, messageData]); // show your own message
       setMsg('');
     }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setMsg(e.target.value);
+    socket.emit('typing', username);
   };
 
   if (!hasJoined) {
@@ -74,10 +83,7 @@ const Chat = () => {
 
       <input
         value={msg}
-        onChange={(e) => {
-          setMsg(e.target.value);
-          socket.emit('typing', username); // Send typing event properly
-        }}
+        onChange={handleInputChange}
         placeholder="Type a message..."
       />
       <button onClick={sendMessage}>Send</button>

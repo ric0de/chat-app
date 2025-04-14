@@ -22,6 +22,16 @@ const Chat: React.FC = () => {
   const [username, setUsername] = useState<string>('');
   const [hasJoined, setHasJoined] = useState<boolean>(false);
 
+  const fetchMessages = async () => {
+    try {
+      const res = await fetch('https://laughing-computing-machine-5gwxg766w76274qx-5000.app.github.dev/api/messages');
+      const data = await res.json();
+      setMessages(data);
+    } catch (err) {
+      console.error('❌ Failed to load messages:', err);
+    }
+  };
+
 
   useEffect(() => {
     socket.on('receive_message', (data: Message) => {
@@ -47,6 +57,12 @@ const Chat: React.FC = () => {
       socket.off('message_deleted');
     };
   }, []);
+
+  useEffect(() => {
+    if (hasJoined) {
+      fetchMessages();
+    }
+  }, [hasJoined]);
 
   const sendMessage = () => {
     if (msg.trim()) {
@@ -108,7 +124,9 @@ const Chat: React.FC = () => {
         />
         <button
           onClick={() => {
-            if (username.trim()) setHasJoined(true);
+            if (username.trim()) {
+              setHasJoined(true);
+            }
           }}
         >
           Join

@@ -5,6 +5,17 @@ import Message from '../models/Message';
 
 const router = express.Router();
 
+// GET /api/messages
+router.get('/', async (_req: Request, res: Response) => {
+  try {
+    const messages = await Message.find().sort({ createdAt: 1 }); // oldest first
+    res.status(200).json(messages);
+  } catch (err) {
+    console.error('❌ Error fetching messages:', err);
+    res.status(500).json({ error: 'Failed to fetch messages' });
+  }
+});
+
 // DELETE /api/messages/:id
 router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
   const messageId = req.params.id;

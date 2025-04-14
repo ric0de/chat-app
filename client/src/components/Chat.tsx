@@ -26,6 +26,7 @@ const Chat: React.FC = () => {
     try {
       const res = await fetch('https://laughing-computing-machine-5gwxg766w76274qx-5000.app.github.dev/api/messages');
       const data = await res.json();
+      console.log('📥 Messages fetched:', data);
       setMessages(data);
     } catch (err) {
       console.error('❌ Failed to load messages:', err);
@@ -34,10 +35,19 @@ const Chat: React.FC = () => {
 
 
   useEffect(() => {
+
+    const handleConnect = () => {
+      if (hasJoined && username) {
+        socket.emit('send_username', username);
+      }
+    };
+
+    socket.on('connect', handleConnect);
+
     socket.on('receive_message', (data: Message) => {
       setMessages((prev) => {
         // Avoid duplicate messages by _id
-        if (prev.some((m) => m._id === data._id)) return prev;
+        if (data._id && prev.some((m) => m._id === data._id)) return prev;
         return [...prev, data];
       });
     });
@@ -52,11 +62,12 @@ const Chat: React.FC = () => {
     });
 
     return () => {
+      socket.off('connect', handleConnect);
       socket.off('receive_message');
       socket.off('typing');
       socket.off('message_deleted');
     };
-  }, []);
+  }, [hasJoined, username]);
 
   useEffect(() => {
     if (hasJoined) {
@@ -126,6 +137,8 @@ const Chat: React.FC = () => {
           onClick={() => {
             if (username.trim()) {
               setHasJoined(true);
+              fetchMessages();
+              socket.emit('send_username', username);
             }
           }}
         >
@@ -140,7 +153,8 @@ const Chat: React.FC = () => {
       <h2>💬 Chat</h2>
       <div>
         {messages.map((m, i) => (
-          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+          <div key={i} style={{ marginBottom: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div>
               <strong>{m.sender}:</strong> {m.content}
             </div>
@@ -160,6 +174,10 @@ const Chat: React.FC = () => {
               </button>
             )}
           </div>
+          <div style={{ fontSize: '0.75em', color: 'gray', marginLeft: '4px' }}>
+            {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </div>
+        </div>
         ))}
       </div>
 

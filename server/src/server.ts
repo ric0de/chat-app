@@ -37,6 +37,19 @@ app.get('/', (_req: Request, res: Response) => {
 io.on('connection', (socket:Socket) => {
   console.log('🟢 New client connected');
 
+  socket.on('send_username', (username: string) => {
+    socket.data.username = username;
+  
+    const joinMsg = {
+      sender: 'System',
+      content: `${username} has joined the chat.`,
+      room: 'main',
+      createdAt: new Date().toISOString(),
+    };
+  
+    socket.broadcast.emit('receive_message', joinMsg);
+  });
+
   socket.on('send_message', async (data: { sender: string; content: string; room?: string }) => {
     try {
       const message = new Message({
@@ -53,6 +66,20 @@ io.on('connection', (socket:Socket) => {
       io.emit('receive_message', savedMessage);
     } catch (err) {
       console.error('❌ Error saving message:', err);
+    }
+  });
+
+  socket.on('disconnecting', async () => {
+    const username = socket.data.username;
+    if (username) {
+      const leaveMessage = new Message({
+        sender: 'System',
+        content: `${username} has left the chat.`,
+        room: 'main',
+        createdAt: new Date().toISOString(),
+      });
+
+      io.emit('receive_message', leaveMessage);
     }
   });
 
